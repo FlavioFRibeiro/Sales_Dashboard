@@ -1,0 +1,69 @@
+-------- Cleansed DIM_Date Table ---------
+SELECT 
+  [DateKey], 
+  [FullDateAlternateKey] AS Date, 
+  [EnglishDayNameOfWeek] AS Day, 
+  [EnglishMonthName] AS Month, 
+  Left([EnglishMonthName], 3) AS MonthShort,   -- Useful for front end date navigation and front end graphs.
+  [MonthNumberOfYear] AS MonthNo, 
+  [CalendarQuarter] AS Quarter, 
+  [CalendarYear] AS Year 
+FROM 
+ AdventureWorksDW2019..DimDate
+
+
+ -------- Cleansed DIM_Customers Table --------
+SELECT 
+  c.customerkey AS CustomerKey, -- Selecting the Customer Key, so I can see their purchases with the Fact Table
+  c.firstname AS [First Name], -- Selecting the customer first name
+  c.lastname AS [Last Name], --Selecting the customer last name
+  c.firstname + ' ' + lastname AS [Full Name], -- Combined First and Last Namw
+	 CASE c.gender WHEN 'M' THEN 'Male' -- Here I customizes their gender to a better format
+				WHEN 'F' THEN 'Female' 
+	 END AS Gender,
+  c.datefirstpurchase AS DateFirstPurchase, -- Here I select the date of the first purchase, to know if the customer is a new or older one
+
+  g.city AS [Customer City] -- Joined in Customer City from Geography Table
+FROM 
+  [AdventureWorksDW2019].[dbo].[DimCustomer] as c
+  LEFT JOIN dbo.dimgeography AS g ON g.geographykey = c.geographykey 
+ORDER BY 
+  CustomerKey ASC -- Ordered List by CustomerKey
+
+
+-------- Cleansed DIM_Products Table --------
+SELECT 
+  p.[ProductKey], 
+  p.[ProductAlternateKey] AS ProductItemCode, 
+  p.[EnglishProductName] AS [Product Name], 
+  ps.EnglishProductSubcategoryName AS [Sub Category], -- Joined in from Sub Category Table
+  pc.EnglishProductCategoryName AS [Product Category], -- Joined in from Category Table 
+  p.[Color] AS [Product Color], 
+  p.[Size] AS [Product Size], 
+  p.[ProductLine] AS [Product Line], 
+  p.[ModelName] AS [Product Model Name], 
+  p.[EnglishDescription] AS [Product Description], 
+  ISNULL (p.Status, 'Outdated') AS [Product Status] --I created a clause for where the value is NULL, the valeu name is changed to 'outdated'
+FROM 
+  [AdventureWorksDW2019].[dbo].[DimProduct] as p
+  LEFT JOIN dbo.DimProductSubcategory AS ps ON ps.ProductSubcategoryKey = p.ProductSubcategoryKey --Join used to fetch the valeus for Product Category and Sub-Category
+  LEFT JOIN dbo.DimProductCategory AS pc ON ps.ProductCategoryKey = pc.ProductCategoryKey 
+ORDER BY 
+  p.ProductKey ASC
+
+
+  -------- Cleansed FACT_InternetSales Table ---------
+SELECT 
+  [ProductKey], -- Related to my Products table
+  [OrderDateKey], -- Date of the sale
+  [DueDateKey], 
+  [ShipDateKey], 
+  [CustomerKey], --Related to the Customer Name
+  [SalesOrderNumber], -- In case I want to count sales orders indiviually 
+  [SalesAmount] -- The actual sales amount
+FROM 
+  [AdventureWorksDW2019]..[FactInternetSales]
+WHERE 
+  LEFT (OrderDateKey, 4) >= YEAR(GETDATE()) -2 -- Ensures we always only bring two years of date from extraction.
+ORDER BY
+  OrderDateKey ASC
